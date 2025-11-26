@@ -28,10 +28,10 @@ import {
   Home,
   ShieldAlert,
   Shield,
-  Info
+  GraduationCap // เพิ่มไอคอนหมวกการศึกษา
 } from 'lucide-react';
 
-// --- 1. TYPES ---
+// --- 1. TYPES (ส่วนกำหนดประเภทข้อมูล) ---
 export enum RiskLevel {
   LOW = 'SAFE',
   MEDIUM = 'CAUTION',
@@ -49,7 +49,7 @@ export interface StudentReport {
   studentName: string;
   phoneNumber?: string;
   dormitory: string;
-  timestamp: Date;
+  timestamp: Date | string;
   location?: Coordinates;
   message: string;
   category: 'FOOD' | 'MEDICAL' | 'EVACUATION' | 'OTHER' | 'SAFE_CHECKIN';
@@ -62,16 +62,34 @@ export interface Announcement {
   id: string;
   title: string;
   content: string;
-  timestamp: Date;
+  timestamp: Date | string;
   type: 'INFO' | 'WARNING' | 'EMERGENCY';
 }
 
 export type ViewState = 'HOME' | 'REPORT' | 'CHAT' | 'ADMIN' | 'CONTACTS';
 
-// --- 2. SERVICES ---
+// --- 2. SERVICES (ส่วนเชื่อมต่อระบบ) ---
 
-// 🚨 Google Sheet URL
+// 🚨 Google Sheet URL: ใส่ Link ของคุณที่นี่
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzg0TICyh4Kr07KdPJFXWK8vb4-wlc5BEOmGNKompvZwZNXA2EDyJfJcUtD6G5DcEmKqg/exec';
+
+const safeDate = (dateInput: any): Date => {
+    try {
+        const d = new Date(dateInput);
+        if (isNaN(d.getTime())) return new Date();
+        return d;
+    } catch {
+        return new Date();
+    }
+};
+
+const formatTimeSafe = (dateInput: any) => {
+    try {
+        return safeDate(dateInput).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    } catch {
+        return "--:--";
+    }
+};
 
 const sendReportToGoogleSheet = async (data: StudentReport) => {
   try {
@@ -108,15 +126,15 @@ const fetchReportsFromSheet = async (): Promise<StudentReport[]> => {
     
     return data.map((item: any) => ({
         id: String(item.id),
-        studentName: item.studentName,
-        phoneNumber: item.phoneNumber,
-        dormitory: item.dormitory,
-        timestamp: new Date(item.timestamp || Date.now()), 
-        message: item.message,
-        category: item.category,
-        riskLevel: item.riskLevel,
+        studentName: item.studentName || 'ไม่ระบุชื่อ',
+        phoneNumber: item.phoneNumber || '-',
+        dormitory: item.dormitory || '-',
+        timestamp: item.timestamp || new Date(),
+        message: item.message || '-',
+        category: item.category || 'OTHER',
+        riskLevel: item.riskLevel || RiskLevel.MEDIUM,
         location: item.location,
-        isResolved: item.isResolved
+        isResolved: item.isResolved === true || item.isResolved === 'true'
     })).reverse();
   } catch (error) {
     console.error("❌ ไม่สามารถดึงข้อมูลจาก Sheet ได้:", error);
@@ -124,13 +142,12 @@ const fetchReportsFromSheet = async (): Promise<StudentReport[]> => {
   }
 };
 
-// Storage Service
 const STORAGE_KEYS = { REPORTS: 'flood_reports', ANNOUNCEMENTS: 'flood_announcements' };
 
 const getStoredReports = (): StudentReport[] => {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.REPORTS);
-    return data ? JSON.parse(data, (key, value) => key === 'timestamp' ? new Date(value) : value) : [];
+    return data ? JSON.parse(data) : [];
   } catch { return []; }
 };
 
@@ -141,7 +158,7 @@ const saveReports = (reports: StudentReport[]) => {
 const getStoredAnnouncements = (): Announcement[] => {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.ANNOUNCEMENTS);
-    return data ? JSON.parse(data, (key, value) => key === 'timestamp' ? new Date(value) : value) : [];
+    return data ? JSON.parse(data) : [];
   } catch { return []; }
 };
 
@@ -149,7 +166,6 @@ const saveAnnouncements = (announcements: Announcement[]) => {
   localStorage.setItem(STORAGE_KEYS.ANNOUNCEMENTS, JSON.stringify(announcements));
 };
 
-// Gemini Service (Mock)
 const analyzeReportPriority = async (message: string, category: string): Promise<{ riskLevel: RiskLevel }> => {
   const criticalKeywords = ['เจ็บ', 'เลือด', 'หมดสติ', 'ไฟดูด', 'จมน้ำ', 'ติดอยู่', 'อพยพ', 'ด่วนที่สุด'];
   const highKeywords = ['ท่วมสูง', 'ไฟดับ', 'ไม่มีอาหาร', 'ป่วย', 'ยาหมด'];
@@ -163,7 +179,6 @@ const analyzeReportPriority = async (message: string, category: string): Promise
 
 // --- 3. COMPONENTS ---
 
-// NavBar
 const NavBar: React.FC<{ currentView: ViewState; setView: (view: ViewState) => void }> = ({ currentView, setView }) => {
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3 flex justify-between items-center z-50 max-w-md mx-auto shadow-[0_-4px_20px_rgba(0,0,0,0.05)] safe-area-pb">
@@ -194,14 +209,13 @@ const NavBar: React.FC<{ currentView: ViewState; setView: (view: ViewState) => v
   );
 };
 
-// ContactList
 const ContactList: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const contacts = [
-    { name: 'อ.ที่ปรึกษาฯ', phone: '061-914-9553', desc: 'อาจารย์ที่ปรึกษาชุมนุมหอพัก' },
-    { name: 'รองผู้อำนวยการ', phone: '089-655-5569', desc: 'รองผู้อำนวยการฝ่ายกิจการนักเรียน' },
-    { name: 'สายตรง ผอ.', phone: '087-397-3315', desc: 'ผู้อำนวยการโรงเรียน' },
-    { name: 'รปภ.ม.อ.', phone: '073313345', desc: 'รปภ.มหาวิทยาลัยสงขลานครินทร์ วิทยาเขตปัตตานี' },
-    { name: 'แพทย์ฉุกเฉิน', phone: '1669', desc: 'เจ็บป่วยฉุกเฉิน' },
+    { name: 'อ.ที่ปรึกษา', phone: '061-914-9553', desc: 'อาจารย์ประจำหอพัก' },
+    { name: 'รองผู้อำนวยการ', phone: '089-655-5569', desc: 'ฝ่ายบริหารทั่วไป' },
+    { name: 'ผอ.โรงเรียน', phone: '087-397-3315', desc: 'ผู้อำนวยการ' },
+    { name: 'ตำรวจ (สภ.เมือง)', phone: '191', desc: 'เหตุด่วนเหตุร้าย' },
+    { name: 'กู้ภัยปัตตานี', phone: '1669', desc: 'เจ็บป่วยฉุกเฉิน' },
   ];
 
   return (
@@ -230,7 +244,6 @@ const ContactList: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   );
 };
 
-// ReportForm
 const ReportForm: React.FC<{ onSubmit: (report: StudentReport) => void; onCancel: () => void; }> = ({ onSubmit, onCancel }) => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -296,8 +309,8 @@ const ReportForm: React.FC<{ onSubmit: (report: StudentReport) => void; onCancel
            </div>
         </div>
         <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์ <span className="text-red-500">*</span></label>
-            <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="08xxxxxxxx" className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required />
+           <label className="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์ <span className="text-red-500">*</span></label>
+           <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="08xxxxxxxx" className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">ประเภท</label>
@@ -332,7 +345,6 @@ const ReportForm: React.FC<{ onSubmit: (report: StudentReport) => void; onCancel
   );
 };
 
-// AdminDashboard
 const AdminDashboard: React.FC<{ 
   reports: StudentReport[]; 
   announcements: Announcement[];
@@ -383,10 +395,13 @@ const AdminDashboard: React.FC<{
   }
 
   const sortedReports = [...reports].sort((a, b) => {
-    const riskScore = { [RiskLevel.CRITICAL]: 4, [RiskLevel.HIGH]: 3, [RiskLevel.MEDIUM]: 2, [RiskLevel.LOW]: 1 };
-    if (riskScore[b.riskLevel] !== riskScore[a.riskLevel]) return riskScore[b.riskLevel] - riskScore[a.riskLevel];
-    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    const riskScore: Record<string, number> = { 'CRITICAL': 4, 'DANGER': 3, 'CAUTION': 2, 'SAFE': 1 };
+    const scoreA = riskScore[a.riskLevel] || 0;
+    const scoreB = riskScore[b.riskLevel] || 0;
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return safeDate(b.timestamp).getTime() - safeDate(a.timestamp).getTime();
   });
+
   const unresolvedCount = reports.filter(r => !r.isResolved).length;
 
   return (
@@ -411,8 +426,8 @@ const AdminDashboard: React.FC<{
           {sortedReports.map((report) => (
             <div key={report.id} className={`bg-white rounded-xl p-4 shadow-sm border-l-4 transition-all ${report.isResolved ? 'opacity-60 border-gray-300' : report.riskLevel === RiskLevel.CRITICAL ? 'border-red-500' : report.riskLevel === RiskLevel.HIGH ? 'border-orange-500' : report.riskLevel === RiskLevel.MEDIUM ? 'border-yellow-400' : 'border-green-500'}`}>
               <div className="flex justify-between items-start mb-2">
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${report.riskLevel === RiskLevel.CRITICAL ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{report.riskLevel}</span>
-                <span className="text-[10px] text-gray-400 flex items-center gap-1"><Clock size={10} />{new Date(report.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${report.riskLevel === RiskLevel.CRITICAL ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{report.riskLevel || 'UNKNOWN'}</span>
+                <span className="text-[10px] text-gray-400 flex items-center gap-1"><Clock size={10} />{formatTimeSafe(report.timestamp)}</span>
               </div>
               <div className="mb-3">
                  <h3 className="font-bold text-gray-800 text-lg leading-tight mb-1">{report.studentName}</h3>
@@ -421,15 +436,15 @@ const AdminDashboard: React.FC<{
                  {report.location && (<a href={`https://maps.google.com/?q=${report.location.latitude},${report.location.longitude}`} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs text-blue-600 hover:underline bg-blue-50 px-2 py-1 rounded"><MapPin size={12} /> ดูพิกัด GPS</a>)}
               </div>
               <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
-                {report.phoneNumber && report.phoneNumber !== 'ไม่ระบุ' ? (
+                {report.phoneNumber && report.phoneNumber !== 'ไม่ระบุ' && report.phoneNumber !== '-' ? (
                      <a href={`tel:${report.phoneNumber}`} className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition shadow-sm active:scale-95"><Phone size={16} /> โทรกลับ</a>
                 ) : (<button disabled className="flex-1 bg-gray-100 text-gray-400 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 cursor-not-allowed"><Phone size={16} /> ไม่มีเบอร์</button>)}
-                <button onClick={() => resolveReport(report.id)} className={`p-2 rounded-lg border transition ${report.isResolved ? 'bg-green-100 text-green-600' : 'bg-white text-gray-400'}`}><CheckCircle size={20} /></button>
+                <button onClick={() => resolveReport(report.id)} className={`p-2 rounded-lg border transition ${report.isResolved ? 'bg-green-100 text-green-600' : 'bg-white text-gray-400'}`}><CheckCircle2 size={20} /></button>
                 <button onClick={() => deleteReport(report.id)} className="p-2 rounded-lg border border-gray-200 text-gray-400 hover:text-red-500"><Trash2 size={20} /></button>
               </div>
             </div>
           ))}
-          {reports.length === 0 && (<div className="text-center py-10 text-gray-400"><CheckCircle size={48} className="mx-auto mb-2 opacity-20" /><p>ยังไม่มีการแจ้งเหตุ</p></div>)}
+          {reports.length === 0 && (<div className="text-center py-10 text-gray-400"><CheckCircle2 size={48} className="mx-auto mb-2 opacity-20" /><p>ยังไม่มีการแจ้งเหตุ</p></div>)}
         </div>
       )}
       {activeTab === 'ANNOUNCE' && (
@@ -452,9 +467,8 @@ const AdminDashboard: React.FC<{
   );
 };
 
-// --- 4. MAIN APP COMPONENT (ส่วนหลักของแอพ) ---
+// --- 4. MAIN APP COMPONENT ---
 
-// ✨ แก้ไข: เพิ่ม WEATHER_DATA กลับมาที่นี่แล้ว
 const WEATHER_DATA = {
   seaLevel: "2.8 ม.",
   rainToday: "120 มม.",
@@ -480,25 +494,21 @@ const App: React.FC = () => {
   const [showQuickModal, setShowQuickModal] = useState(false);
   const [quickStatus, setQuickStatus] = useState<'SAFE' | 'ANXIOUS' | 'HUNGRY' | null>(null);
   const [quickName, setQuickName] = useState('');
+  const [quickClass, setQuickClass] = useState(''); // เพิ่ม state ชั้นเรียน
   const [quickPhone, setQuickPhone] = useState('');
 
-  // ระบบ Auto-Sync ข้อมูล
   useEffect(() => {
-    // 1. โหลดจากเครื่องก่อน (เพื่อให้แสดงผลเร็ว)
     setReports(getStoredReports());
     setAnnouncements(getStoredAnnouncements());
 
-    // 2. ดึงข้อมูลจาก Google Sheet (Sync)
     const syncData = async () => {
         const onlineReports = await fetchReportsFromSheet();
         if (onlineReports.length > 0) {
             setReports(onlineReports);
-            saveReports(onlineReports); // อัพเดตลงเครื่องด้วย
+            saveReports(onlineReports);
         }
     };
-    syncData(); // ดึงครั้งแรกทันที
-
-    // ตั้งเวลาดึงใหม่ทุก 10 วินาที (Real-time Sync)
+    syncData(); 
     const interval = setInterval(syncData, 10000);
     return () => clearInterval(interval);
   }, []);
@@ -523,16 +533,17 @@ const App: React.FC = () => {
   const deleteAnnouncement = (id: string) => { setAnnouncements(prev => prev.filter(a => a.id !== id)); };
 
   const initiateQuickReport = (status: 'SAFE' | 'ANXIOUS' | 'HUNGRY') => {
-    setQuickStatus(status); setQuickName(''); setQuickPhone(''); setShowQuickModal(true);
+    setQuickStatus(status); setQuickName(''); setQuickClass(''); setQuickPhone(''); setShowQuickModal(true);
   };
 
   const confirmQuickReport = () => {
     if (!quickName.trim()) { alert("กรุณาระบุชื่อ-สกุล"); return; }
+    if (!quickClass.trim()) { alert("กรุณาระบุระดับชั้น"); return; }
     if (!quickPhone.trim()) { alert("กรุณาระบุเบอร์โทรศัพท์"); return; }
 
     let report: StudentReport = {
         id: Date.now().toString(),
-        studentName: quickName,
+        studentName: `${quickName} (ชั้น ${quickClass})`,
         phoneNumber: quickPhone,
         dormitory: 'ไม่ระบุ',
         timestamp: new Date(),
@@ -582,17 +593,15 @@ const App: React.FC = () => {
 
   const renderHome = () => (
     <div className="px-4 pt-4 pb-24 max-w-md mx-auto space-y-5 animate-fade-in">
-      {/* Header */}
       <div className="flex justify-between items-start">
         <div><h1 className="text-xl font-bold text-blue-900 leading-tight font-prompt">Satit PSU <br/>Flood Care</h1><p className="text-xs text-gray-500">รูสะมิแล, ปัตตานี</p></div>
         <div className="text-right"><div className="text-2xl font-mono font-bold text-gray-800 leading-none">{currentTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</div><div className="text-xs text-gray-500">{currentTime.toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'short' })}</div></div>
       </div>
       
-      {/* Monitor Card */}
       <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
         <div className="absolute -right-4 -top-4 opacity-20"><Waves size={100} /></div>
         <div className="flex justify-between items-end mb-4 relative z-10">
-            <div><h2 className="text-sm font-medium text-blue-100 flex items-center gap-1"><Droplets size={14}/> ปริมาณฝนสะสม (วันนี้)</h2><div className="text-3xl font-bold">{WEATHER_DATA.rainToday}</div><span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">{WEATHER_DATA.rainStatus}</span></div>
+            <div><h2 className="text-sm font-medium text-blue-100 flex items-center gap-1"><Droplets size={14}/> ปริมาณฝนสะสม</h2><div className="text-3xl font-bold">{WEATHER_DATA.rainToday}</div><span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">{WEATHER_DATA.rainStatus}</span></div>
             <div className="text-right"><h2 className="text-sm font-medium text-blue-100 flex items-center justify-end gap-1"><Waves size={14}/> ระดับน้ำทะเล</h2><div className="text-2xl font-bold">{WEATHER_DATA.seaLevel}</div><div className="text-xs text-blue-200">หนุนสูงกว่าปกติ</div></div>
         </div>
         <div className="bg-white/10 backdrop-blur-md rounded-xl p-3">
@@ -603,76 +612,42 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* ✨ Modern Quick Status Section */}
       <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-4 border border-blue-50 shadow-sm">
         <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
             <span className="w-1.5 h-5 bg-blue-600 rounded-full"></span>
             รายงานสถานะด่วน
         </h3>
         <div className="grid grid-cols-3 gap-3">
-            {/* Safe Button */}
-            <button 
-                onClick={() => initiateQuickReport('SAFE')}
-                className="relative group flex flex-col items-center gap-2 p-3 rounded-2xl border border-green-100 bg-gradient-to-br from-green-50 to-white hover:shadow-md hover:-translate-y-1 transition-all duration-300 active:scale-95"
-            >
-                <div className="p-3 rounded-full bg-green-100 text-green-600 group-hover:bg-green-500 group-hover:text-white transition-colors duration-300 shadow-sm">
-                    <Smile size={28} strokeWidth={2.5} />
-                </div>
-                <span className="text-xs font-bold text-green-700">ปลอดภัยดี</span>
+            <button onClick={() => initiateQuickReport('SAFE')} className="relative group flex flex-col items-center gap-2 p-3 rounded-2xl border border-green-100 bg-gradient-to-br from-green-50 to-white hover:shadow-md hover:-translate-y-1 transition-all duration-300 active:scale-95">
+                <div className="p-3 rounded-full bg-green-100 text-green-600 group-hover:bg-green-500 group-hover:text-white transition-colors duration-300 shadow-sm"><Smile size={28} strokeWidth={2.5} /></div><span className="text-xs font-bold text-green-700">ปลอดภัยดี</span>
             </button>
-
-            {/* Anxious Button */}
-            <button 
-                onClick={() => initiateQuickReport('ANXIOUS')}
-                className="relative group flex flex-col items-center gap-2 p-3 rounded-2xl border border-yellow-100 bg-gradient-to-br from-yellow-50 to-white hover:shadow-md hover:-translate-y-1 transition-all duration-300 active:scale-95"
-            >
-                <div className="p-3 rounded-full bg-yellow-100 text-yellow-600 group-hover:bg-yellow-500 group-hover:text-white transition-colors duration-300 shadow-sm">
-                    <Frown size={28} strokeWidth={2.5} />
-                </div>
-                <span className="text-xs font-bold text-yellow-700">รู้สึกกังวล</span>
+            <button onClick={() => initiateQuickReport('ANXIOUS')} className="relative group flex flex-col items-center gap-2 p-3 rounded-2xl border border-yellow-100 bg-gradient-to-br from-yellow-50 to-white hover:shadow-md hover:-translate-y-1 transition-all duration-300 active:scale-95">
+                <div className="p-3 rounded-full bg-yellow-100 text-yellow-600 group-hover:bg-yellow-500 group-hover:text-white transition-colors duration-300 shadow-sm"><Frown size={28} strokeWidth={2.5} /></div><span className="text-xs font-bold text-yellow-700">รู้สึกกังวล</span>
             </button>
-
-            {/* Hungry Button */}
-            <button 
-                onClick={() => initiateQuickReport('HUNGRY')}
-                className="relative group flex flex-col items-center gap-2 p-3 rounded-2xl border border-orange-100 bg-gradient-to-br from-orange-50 to-white hover:shadow-md hover:-translate-y-1 transition-all duration-300 active:scale-95"
-            >
-                <div className="p-3 rounded-full bg-orange-100 text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-colors duration-300 shadow-sm">
-                    <Utensils size={28} strokeWidth={2.5} />
-                </div>
-                <span className="text-xs font-bold text-orange-700">ขาดอาหาร</span>
+            <button onClick={() => initiateQuickReport('HUNGRY')} className="relative group flex flex-col items-center gap-2 p-3 rounded-2xl border border-orange-100 bg-gradient-to-br from-orange-50 to-white hover:shadow-md hover:-translate-y-1 transition-all duration-300 active:scale-95">
+                <div className="p-3 rounded-full bg-orange-100 text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-colors duration-300 shadow-sm"><Utensils size={28} strokeWidth={2.5} /></div><span className="text-xs font-bold text-orange-700">ขาดอาหาร</span>
             </button>
         </div>
       </div>
 
-      {/* Menu Grid */}
       <div className="grid grid-cols-2 gap-3">
          <button onClick={() => setView('REPORT')} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3 hover:bg-blue-50 transition active:scale-95"><div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center flex-shrink-0"><AlertCircle size={24} /></div><div className="text-left"><div className="font-bold text-gray-800 text-sm">แจ้งเหตุอื่นๆ</div><div className="text-xs text-gray-500">แบบฟอร์มละเอียด</div></div></button>
          <button onClick={() => setView('CONTACTS')} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3 hover:bg-green-50 transition active:scale-95"><div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center flex-shrink-0"><PhoneCall size={24} /></div><div className="text-left"><div className="font-bold text-gray-800 text-sm">เบอร์ฉุกเฉิน</div><div className="text-xs text-gray-500">ติดต่อ จนท.</div></div></button>
       </div>
 
-      {/* SOS Button */}
       <button onClick={handleSOS} disabled={sosLoading} className="w-full bg-red-600 text-white rounded-2xl py-4 shadow-lg shadow-red-200 active:scale-95 transition-transform flex items-center justify-center gap-3 group mt-2 disabled:opacity-70">{sosLoading ? (<Loader2 size={24} className="animate-spin" />) : (<><div className="relative"><div className="absolute inset-0 bg-white rounded-full animate-ping opacity-30"></div><Bell size={24} className="relative z-10" /></div><div className="text-left"><div className="text-lg font-bold leading-none">S O S</div><div className="text-xs opacity-90">ขอความช่วยเหลือฉุกเฉิน</div></div></>)}</button>
       
-      {/* Announcements */}
       <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
         <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2 text-sm"><span className="w-1 h-4 bg-blue-500 rounded-full"></span> ประกาศจากโรงเรียน</h3>
         <div className="space-y-3">
-            {announcements.map((ann) => (<div key={ann.id} className={`text-sm border-l-2 pl-3 ${ann.type === 'EMERGENCY' ? 'border-red-500' : ann.type === 'WARNING' ? 'border-orange-500' : 'border-blue-500'}`}><div className="flex justify-between items-start"><p className="font-semibold text-gray-700 text-sm">{ann.title}</p><span className="text-[10px] text-gray-400 whitespace-nowrap">{new Date(ann.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></div><p className="text-gray-500 text-xs mt-1">{ann.content}</p></div>))}
+            {announcements.map((ann) => (<div key={ann.id} className={`text-sm border-l-2 pl-3 ${ann.type === 'EMERGENCY' ? 'border-red-500' : ann.type === 'WARNING' ? 'border-orange-500' : 'border-blue-500'}`}><div className="flex justify-between items-start"><p className="font-semibold text-gray-700 text-sm">{ann.title}</p><span className="text-[10px] text-gray-400 whitespace-nowrap">{formatTimeSafe(ann.timestamp)}</span></div><p className="text-gray-500 text-xs mt-1">{ann.content}</p></div>))}
              {announcements.length === 0 && (<div className="text-center text-xs text-gray-400 py-2">ยังไม่มีประกาศใหม่</div>)}
         </div>
       </div>
 
-      {/* ✨ Footer Credit */}
       <div className="text-center py-6 pb-8">
-        <div className="inline-flex items-center justify-center gap-2 opacity-60">
-            <div className="h-px w-8 bg-gray-300"></div>
-            <span className="text-[10px] text-gray-400 font-medium">พัฒนาโดย ฝ่ายกิจการนักเรียน</span>
-            <div className="h-px w-8 bg-gray-300"></div>
-        </div>
-        <p className="text-[10px] text-gray-400 mt-1 font-medium tracking-wider">PSU-DS @2025</p>
+        <div className="inline-flex items-center justify-center gap-2 opacity-60"><div className="h-px w-8 bg-gray-300"></div><span className="text-[10px] text-gray-400 font-medium">พัฒนาโดย ฝ่ายกิจการนักเรียน</span><div className="h-px w-8 bg-gray-300"></div></div><p className="text-[10px] text-gray-400 mt-1 font-medium tracking-wider">PSU-DS @2025</p>
       </div>
-
     </div>
   );
 
@@ -684,11 +659,50 @@ const App: React.FC = () => {
         {view === 'ADMIN' && (<AdminDashboard reports={reports} announcements={announcements} resolveReport={resolveReport} deleteReport={deleteReport} postAnnouncement={postAnnouncement} deleteAnnouncement={deleteAnnouncement}/>)}
         {view === 'CONTACTS' && (<ContactList onBack={() => setView('HOME')} />)}
         
-        {/* SOS Modal */}
         {showSOSDialog && (<div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 animate-in fade-in zoom-in duration-300"><div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl"><div className="bg-red-600 p-5 text-white text-center relative overflow-hidden"><div className="animate-ping w-24 h-24 bg-red-400 rounded-full absolute top-[-20px] left-1/2 -translate-x-1/2 opacity-30"></div><Siren size={48} className="mx-auto mb-2 relative z-10" /><h2 className="text-2xl font-bold relative z-10">ส่งสัญญาณแล้ว!</h2></div><div className="p-5"><div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-5"><h3 className="text-green-800 font-bold text-sm mb-2 flex items-center gap-2"><CheckCircle2 size={16} /> ระบบแจ้งเตือนเรียบร้อย</h3><ul className="text-xs text-gray-600 space-y-1 ml-6 list-disc"><li>อ.ที่ปรึกษา (061-914-9553)</li><li>รองผู้อำนวยการ (089-655-5569)</li><li>ผอ.โรงเรียน (087-397-3315)</li></ul></div><p className="text-center text-gray-800 font-bold mb-3">ต้องการความช่วยเหลือทางใด?</p><div className="space-y-3"><a href="tel:191" className="block w-full bg-red-600 text-white py-4 rounded-xl text-xl font-bold text-center shadow-lg hover:bg-red-700 hover:shadow-red-200 transition-all flex items-center justify-center gap-3 active:scale-95"><Siren size={24} /> โทร 191</a><a href="tel:1669" className="block w-full bg-green-600 text-white py-4 rounded-xl text-xl font-bold text-center shadow-lg hover:bg-green-700 hover:shadow-green-200 transition-all flex items-center justify-center gap-3 active:scale-95"><HeartPulse size={24} /> โทร 1669</a></div><div className="text-center pt-4"><button onClick={() => setShowSOSDialog(false)} className="text-gray-400 underline text-sm hover:text-gray-600">ปิดหน้าต่างนี้</button></div></div></div></div>)}
         
-        {/* Quick Report Modern Modal */}
-        {showQuickModal && (<div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200 backdrop-blur-sm"><div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200"><div className={`p-5 text-white flex justify-between items-center ${quickStatus === 'SAFE' ? 'bg-green-500' : quickStatus === 'ANXIOUS' ? 'bg-yellow-500' : 'bg-orange-500'}`}><div className="flex items-center gap-3"><div className="bg-white/20 p-2 rounded-full">{quickStatus === 'SAFE' ? <Smile size={24}/> : quickStatus === 'ANXIOUS' ? <Frown size={24}/> : <Utensils size={24}/>}</div><div><div className="text-xs opacity-90">ยืนยันสถานะ</div><div className="text-lg font-bold">{quickStatus === 'SAFE' ? 'ปลอดภัยดี' : quickStatus === 'ANXIOUS' ? 'รู้สึกกังวล' : 'ขาดอาหาร'}</div></div></div><button onClick={() => setShowQuickModal(false)} className="bg-white/20 p-1 rounded-full hover:bg-white/40 transition"><X size={20} /></button></div><div className="p-6 space-y-4"><div><label className="text-sm font-bold text-gray-700 mb-1 block">ชื่อ-สกุล <span className="text-red-500">*</span></label><div className="relative"><User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input type="text" value={quickName} onChange={e => setQuickName(e.target.value)} className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-800" placeholder="เช่น สมชาย ใจดี" autoFocus/></div></div><div><label className="text-sm font-bold text-gray-700 mb-1 block">เบอร์โทรศัพท์ <span className="text-red-500">*</span></label><div className="relative"><Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input type="tel" value={quickPhone} onChange={e => setQuickPhone(e.target.value)} className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-800" placeholder="เช่น 081-234-5678"/></div></div><div className="pt-2 flex gap-3"><button onClick={() => setShowQuickModal(false)} className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition">ยกเลิก</button><button onClick={confirmQuickReport} className={`flex-1 py-3 text-white rounded-xl font-bold shadow-lg shadow-gray-200 active:scale-95 transition ${quickStatus === 'SAFE' ? 'bg-green-500 hover:bg-green-600' : quickStatus === 'ANXIOUS' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-orange-500 hover:bg-orange-600'}`}>ยืนยันข้อมูล</button></div></div></div></div>)}
+        {/* Quick Report Modal with Class Input */}
+        {showQuickModal && (
+            <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200 backdrop-blur-sm">
+                <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+                    <div className={`p-5 text-white flex justify-between items-center ${quickStatus === 'SAFE' ? 'bg-green-500' : quickStatus === 'ANXIOUS' ? 'bg-yellow-500' : 'bg-orange-500'}`}>
+                        <div className="flex items-center gap-3">
+                            <div className="bg-white/20 p-2 rounded-full">{quickStatus === 'SAFE' ? <Smile size={24}/> : quickStatus === 'ANXIOUS' ? <Frown size={24}/> : <Utensils size={24}/>}</div>
+                            <div><div className="text-xs opacity-90">ยืนยันสถานะ</div><div className="text-lg font-bold">{quickStatus === 'SAFE' ? 'ปลอดภัยดี' : quickStatus === 'ANXIOUS' ? 'รู้สึกกังวล' : 'ขาดอาหาร'}</div></div>
+                        </div>
+                        <button onClick={() => setShowQuickModal(false)} className="bg-white/20 p-1 rounded-full hover:bg-white/40 transition"><X size={20} /></button>
+                    </div>
+                    <div className="p-6 space-y-4">
+                        <div>
+                            <label className="text-sm font-bold text-gray-700 mb-1 block">ชื่อ-สกุล <span className="text-red-500">*</span></label>
+                            <div className="relative">
+                                <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <input type="text" value={quickName} onChange={e => setQuickName(e.target.value)} className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-800" placeholder="เช่น สมชาย ใจดี" autoFocus/>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="text-sm font-bold text-gray-700 mb-1 block">ชั้นเรียน <span className="text-red-500">*</span></label>
+                            <div className="relative">
+                                <GraduationCap size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <input type="text" value={quickClass} onChange={e => setQuickClass(e.target.value)} className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-800" placeholder="เช่น ม.6/1"/>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="text-sm font-bold text-gray-700 mb-1 block">เบอร์โทรศัพท์ <span className="text-red-500">*</span></label>
+                            <div className="relative">
+                                <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <input type="tel" value={quickPhone} onChange={e => setQuickPhone(e.target.value)} className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-800" placeholder="เช่น 081-234-5678"/>
+                            </div>
+                        </div>
+                        <div className="pt-2 flex gap-3">
+                            <button onClick={() => setShowQuickModal(false)} className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition">ยกเลิก</button>
+                            <button onClick={confirmQuickReport} className={`flex-1 py-3 text-white rounded-xl font-bold shadow-lg shadow-gray-200 active:scale-95 transition ${quickStatus === 'SAFE' ? 'bg-green-500 hover:bg-green-600' : quickStatus === 'ANXIOUS' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-orange-500 hover:bg-orange-600'}`}>ยืนยันข้อมูล</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
+
       </div>
       <NavBar currentView={view} setView={setView} />
     </div>
