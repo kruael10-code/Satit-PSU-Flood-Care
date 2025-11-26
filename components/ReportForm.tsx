@@ -15,6 +15,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ onSubmit, onCancel }) => {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locLoading, setLocLoading] = useState(false);
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState(''); // ✨ เพิ่ม state เก็บเบอร์โทร
   const [dorm, setDorm] = useState('');
 
   const getLocation = () => {
@@ -41,9 +42,15 @@ const ReportForm: React.FC<ReportFormProps> = ({ onSubmit, onCancel }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // ✨ ส่วนที่ 1: เช็คชื่อก่อนส่ง (เพิ่มใหม่)
+    // 1. เช็คชื่อ
     if (!name.trim()) {
         alert('⚠️ กรุณากรอก "ชื่อ-สกุล" ให้เรียบร้อยก่อนส่งข้อมูลครับ!');
+        return;
+    }
+
+    // ✨ 2. เช็คเบอร์โทร (เพิ่มใหม่)
+    if (!phone.trim()) {
+        alert('⚠️ กรุณากรอก "เบอร์โทรศัพท์" เพื่อให้เจ้าหน้าที่ติดต่อกลับได้ครับ!');
         return;
     }
 
@@ -57,6 +64,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ onSubmit, onCancel }) => {
     const newReport: StudentReport = {
       id: Date.now().toString(),
       studentName: name,
+      phoneNumber: phone, // ✨ ส่งเบอร์โทรไปด้วย
       dormitory: dorm || 'Unspecified',
       timestamp: new Date(),
       message,
@@ -77,7 +85,6 @@ const ReportForm: React.FC<ReportFormProps> = ({ onSubmit, onCancel }) => {
         
         <div className="grid grid-cols-2 gap-2">
            <div>
-            {/* ✨ ส่วนที่ 2: เพิ่มดาวสีแดง (*) บอกความสำคัญ */}
             <label className="block text-sm font-medium text-gray-700 mb-1">
                 ชื่อ-สกุล <span className="text-red-500">*</span>
             </label>
@@ -85,7 +92,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ onSubmit, onCancel }) => {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="ระบุชื่อ-สกุล (จำเป็น)"
+                placeholder="ระบุชื่อ-สกุล"
                 className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 required
             />
@@ -96,10 +103,25 @@ const ReportForm: React.FC<ReportFormProps> = ({ onSubmit, onCancel }) => {
                 type="text"
                 value={dorm}
                 onChange={(e) => setDorm(e.target.value)}
-                placeholder="เช่น หอ 8, รูสะมิแล"
+                placeholder="เช่น หอ 8"
                 className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
            </div>
+        </div>
+
+        {/* ✨ เพิ่มช่องกรอกเบอร์โทรศัพท์ */}
+        <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+                เบอร์โทรศัพท์ <span className="text-red-500">*</span>
+            </label>
+            <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="08xxxxxxxx (เพื่อติดต่อกลับ)"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                required
+            />
         </div>
 
         <div>

@@ -13,6 +13,8 @@ export interface Coordinates {
 export interface StudentReport {
   id: string;
   studentName: string;
+  // ✨ เพิ่มบรรทัดนี้ครับ (ใส่ ? ไว้เพื่อให้ข้อมูลเก่าที่ไม่เคยมีเบอร์ไม่ Error)
+  phoneNumber?: string; 
   dormitory: string;
   timestamp: Date; // In storage this will be string, needs conversion
   location?: Coordinates;

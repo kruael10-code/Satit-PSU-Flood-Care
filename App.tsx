@@ -81,10 +81,19 @@ const App: React.FC = () => {
     setAnnouncements(prev => prev.filter(a => a.id !== id));
   };
 
+  // ✨ ฟังก์ชันที่แก้ไขแล้ว: ถามชื่อและเบอร์โทรก่อนบันทึก
   const handleQuickStatus = (status: 'SAFE' | 'ANXIOUS' | 'HUNGRY') => {
+    // 1. ถามชื่อ
+    const nameInput = prompt("กรุณาระบุ ชื่อ-สกุล (เช่น: สมชาย ใจดี)");
+    if (!nameInput) return; // ถ้ากด Cancel ให้ยกเลิกการส่ง
+
+    // 2. ถามเบอร์โทร
+    const phoneInput = prompt("ระบุเบอร์โทรศัพท์ติดต่อกลับ (เช่น: 081xxxxxxx)");
+
     let report: StudentReport = {
         id: Date.now().toString(),
-        studentName: 'นักเรียน (รายงานด่วน)',
+        studentName: nameInput, // ✅ ใช้ชื่อที่กรอกมา
+        phoneNumber: phoneInput || 'ไม่ระบุ', // ✅ เก็บเบอร์โทร (ถ้าไม่กรอกใส่ 'ไม่ระบุ')
         dormitory: 'ไม่ระบุ',
         timestamp: new Date(),
         message: '',
