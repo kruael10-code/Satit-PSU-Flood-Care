@@ -1,0 +1,8 @@
+{
+  "name": "Satit PSU Flood Care",
+  "description": "A crisis management tool for Satit PSU students in Pattani (Rusamilae) to report status and request help during floods.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
