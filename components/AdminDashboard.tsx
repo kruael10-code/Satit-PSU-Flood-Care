@@ -32,7 +32,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === 'admin' || password === '1234') {
+    if (password === 'admin' || password === '94001') {
         setIsAuthenticated(true);
     } else {
         alert('รหัสผ่านผิด (Hint: admin)');
