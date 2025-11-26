@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
-    // ✨ สำคัญมาก: เพิ่มบรรทัดนี้เพื่อให้ Path ของไฟล์ถูกต้อง ไม่ว่า Deploy ที่ไหน
+    // บรรทัดนี้สำคัญมากสำหรับการ Deploy ครับ
     base: './',
 
     server: {
