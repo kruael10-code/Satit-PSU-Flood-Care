@@ -5,9 +5,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
-    // บรรทัดนี้สำคัญมากสำหรับการ Deploy ครับ
-    base: './',
-
+    // ❌ ลบบรรทัด base: './', ออกไปเลยครับสำหรับ Vercel
+    // หรือถ้าจะใส่ ให้ใส่เป็น '/' (แต่ลบออกเลยดีที่สุดครับ)
+    
     server: {
       port: 3000,
       host: '0.0.0.0',
