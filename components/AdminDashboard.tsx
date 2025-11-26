@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StudentReport, Announcement, RiskLevel } from '../types';
-import { CheckCircle, Trash2, Phone, MapPin, Clock, MessageSquare, AlertTriangle, User } from 'lucide-react';
+import { CheckCircle, Trash2, Phone, MapPin, Clock, MessageSquare, LogOut, Lock } from 'lucide-react';
 
 interface AdminDashboardProps {
   reports: StudentReport[];
@@ -19,10 +19,75 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   postAnnouncement,
   deleteAnnouncement,
 }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  // ✨ ส่วนที่ 1: ตรวจสอบการล็อกอิน (Code ของคุณ)
+  useEffect(() => {
+    const storedAuth = localStorage.getItem('floodCareAdminAuth');
+    if (storedAuth === 'true') {
+        setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === '94001') {
+      setIsAuthenticated(true);
+      setError('');
+      localStorage.setItem('floodCareAdminAuth', 'true');
+    } else {
+      setError('รหัสผ่านไม่ถูกต้อง');
+    }
+  };
+
+  const handleLogout = () => {
+      localStorage.removeItem('floodCareAdminAuth');
+      setIsAuthenticated(false);
+      setPassword('');
+  };
+
   const [activeTab, setActiveTab] = useState<'REPORTS' | 'ANNOUNCE'>('REPORTS');
   const [newAnnounce, setNewAnnounce] = useState({ title: '', content: '', type: 'INFO' });
 
-  // เรียงลำดับ: เอาเคสด่วน (CRITICAL/HIGH) ขึ้นก่อน และเอาเคสใหม่สุดขึ้นก่อน
+  // หน้า Login
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center px-4">
+        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm border border-gray-100">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600">
+                <Lock size={32} />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800">เข้าสู่ระบบเจ้าหน้าที่</h2>
+            <p className="text-sm text-gray-500">สำหรับแอดมินและครูที่ปรึกษา</p>
+          </div>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+                <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-center text-lg tracking-widest"
+                    placeholder="รหัสผ่าน"
+                    autoFocus
+                />
+            </div>
+            {error && <p className="text-red-500 text-sm text-center bg-red-50 py-2 rounded-lg">{error}</p>}
+            <button
+              type="submit"
+              className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 active:scale-95 transition-all"
+            >
+              เข้าสู่ระบบ
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // Sorting Reports
   const sortedReports = [...reports].sort((a, b) => {
     const riskScore = { [RiskLevel.CRITICAL]: 4, [RiskLevel.HIGH]: 3, [RiskLevel.MEDIUM]: 2, [RiskLevel.LOW]: 1 };
     if (riskScore[b.riskLevel] !== riskScore[a.riskLevel]) {
@@ -35,7 +100,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   return (
     <div className="pb-24 pt-6 px-4 max-w-md mx-auto">
-      {/* Header Tabs */}
+      {/* Header Tabs with Logout */}
+      <div className="flex justify-between items-center mb-4">
+         <h2 className="font-bold text-gray-800 text-lg">จัดการข้อมูล</h2>
+         <button 
+            onClick={handleLogout}
+            className="text-xs text-red-500 flex items-center gap-1 hover:bg-red-50 px-2 py-1 rounded transition"
+         >
+            <LogOut size={14} /> ออกจากระบบ
+         </button>
+      </div>
+
       <div className="flex bg-white rounded-xl p-1 shadow-sm mb-6 border border-gray-100">
         <button
           onClick={() => setActiveTab('REPORTS')}
@@ -110,7 +185,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                  
                  {report.location && (
                     <a 
-                        href={`https://www.google.com/maps/search/?api=1&query=${report.location.latitude},${report.location.longitude}`}
+                        href={`https://maps.google.com/?q=${report.location.latitude},${report.location.longitude}`}
                         target="_blank"
                         rel="noreferrer"
                         className="mt-2 inline-flex items-center gap-1 text-xs text-blue-600 hover:underline bg-blue-50 px-2 py-1 rounded"
@@ -122,7 +197,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
-                {/* ปุ่มโทรออก: ใช้งานได้จริงแล้ว */}
+                {/* ✨ ปุ่มโทรหาผู้แจ้ง (ที่เพิ่มกลับเข้ามาให้) */}
                 {report.phoneNumber && report.phoneNumber !== 'ไม่ระบุ' ? (
                      <a 
                         href={`tel:${report.phoneNumber}`}
