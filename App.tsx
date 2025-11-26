@@ -3,15 +3,14 @@ import { ViewState, StudentReport, RiskLevel, Announcement } from './types';
 import NavBar from './components/NavBar';
 import ReportForm from './components/ReportForm';
 import AdminDashboard from './components/AdminDashboard';
-// ❌ เอา import ChatInterface ออกแล้ว
 import ContactList from './components/ContactList';
-import { Bell, PhoneCall, Droplets, CloudRain, Waves, Smile, Frown, Utensils, AlertCircle, ChevronRight, Siren, HeartPulse, Loader2, CheckCircle2 } from 'lucide-react';
+import { Bell, PhoneCall, Droplets, CloudRain, Waves, Smile, Frown, Utensils, AlertCircle, ChevronRight, Siren, HeartPulse, Loader2, CheckCircle2, User, Phone, X } from 'lucide-react';
 import { getStoredReports, saveReports, getStoredAnnouncements, saveAnnouncements } from './services/storageService';
 import { sendReportToGoogleSheet } from './services/googleSheetService';
 
 // Mock Weather Data for Pattani/Rusamilae
 const WEATHER_DATA = {
-  seaLevel: "2.8 ม.", // Removed (รทก.)
+  seaLevel: "2.8 ม.",
   rainToday: "120 มม.",
   rainStatus: "ตกหนักมาก",
   forecast: [
@@ -34,6 +33,12 @@ const App: React.FC = () => {
   // SOS States
   const [showSOSDialog, setShowSOSDialog] = useState(false);
   const [sosLoading, setSosLoading] = useState(false);
+
+  // ✨ New States for Quick Report Modal (เพิ่ม State สำหรับ Modal ใหม่)
+  const [showQuickModal, setShowQuickModal] = useState(false);
+  const [quickStatus, setQuickStatus] = useState<'SAFE' | 'ANXIOUS' | 'HUNGRY' | null>(null);
+  const [quickName, setQuickName] = useState('');
+  const [quickPhone, setQuickPhone] = useState('');
 
   // Load data from LocalStorage on mount
   useEffect(() => {
@@ -81,19 +86,29 @@ const App: React.FC = () => {
     setAnnouncements(prev => prev.filter(a => a.id !== id));
   };
 
-  // ✨ ฟังก์ชันที่แก้ไขแล้ว: ถามชื่อและเบอร์โทรก่อนบันทึก
-  const handleQuickStatus = (status: 'SAFE' | 'ANXIOUS' | 'HUNGRY') => {
-    // 1. ถามชื่อ
-    const nameInput = prompt("กรุณาระบุ ชื่อ-สกุล (เช่น: สมชาย ใจดี)");
-    if (!nameInput) return; // ถ้ากด Cancel ให้ยกเลิกการส่ง
+  // ✨ ฟังก์ชันเริ่มกดปุ่มด่วน (เปิด Modal แทนการใช้ prompt)
+  const initiateQuickReport = (status: 'SAFE' | 'ANXIOUS' | 'HUNGRY') => {
+    setQuickStatus(status);
+    setQuickName(''); // รีเซ็ตค่าชื่อ
+    setQuickPhone(''); // รีเซ็ตค่าเบอร์
+    setShowQuickModal(true); // เปิด Modal
+  };
 
-    // 2. ถามเบอร์โทร
-    const phoneInput = prompt("ระบุเบอร์โทรศัพท์ติดต่อกลับ (เช่น: 081xxxxxxx)");
+  // ✨ ฟังก์ชันยืนยันการส่งข้อมูล (ทำงานเมื่อกดปุ่มใน Modal)
+  const confirmQuickReport = () => {
+    if (!quickName.trim()) {
+        alert("กรุณาระบุชื่อ-สกุล");
+        return;
+    }
+    if (!quickPhone.trim()) {
+        alert("กรุณาระบุเบอร์โทรศัพท์");
+        return;
+    }
 
     let report: StudentReport = {
         id: Date.now().toString(),
-        studentName: nameInput, // ✅ ใช้ชื่อที่กรอกมา
-        phoneNumber: phoneInput || 'ไม่ระบุ', // ✅ เก็บเบอร์โทร (ถ้าไม่กรอกใส่ 'ไม่ระบุ')
+        studentName: quickName,
+        phoneNumber: quickPhone,
         dormitory: 'ไม่ระบุ',
         timestamp: new Date(),
         message: '',
@@ -102,29 +117,29 @@ const App: React.FC = () => {
         isResolved: false
     };
 
-    switch (status) {
+    switch (quickStatus) {
         case 'SAFE':
             report.message = 'รายงานตัว: ปลอดภัยดีครับ/ค่ะ';
             report.category = 'SAFE_CHECKIN';
             report.riskLevel = RiskLevel.LOW;
-            alert("บันทึกสถานะ: ปลอดภัย ✅");
             break;
         case 'ANXIOUS':
             report.message = 'รู้สึกกังวล/เครียด ต้องการคำปรึกษา';
             report.category = 'OTHER';
             report.riskLevel = RiskLevel.MEDIUM;
-            alert("บันทึกสถานะ: กังวล (เจ้าหน้าที่จะติดต่อกลับ) ⚠️");
             break;
         case 'HUNGRY':
             report.message = 'ขาดแคลนอาหาร/น้ำดื่ม';
             report.category = 'FOOD';
             report.riskLevel = RiskLevel.HIGH;
-            alert("บันทึกสถานะ: ต้องการอาหาร 🍱");
             break;
     }
+
     setReports(prev => [...prev, report]);
-    // Send to Google Sheet
     sendReportToGoogleSheet(report);
+    
+    setShowQuickModal(false); // ปิด Modal
+    alert("✅ บันทึกข้อมูลเรียบร้อยครับ");
   };
 
   const handleSOS = async () => {
@@ -228,13 +243,13 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Quick Check-in Buttons */}
+      {/* Quick Check-in Buttons (แก้ไขให้เรียก initiateQuickReport) */}
       <div>
         <h3 className="text-sm font-bold text-gray-700 mb-3 ml-1">รายงานสถานะด่วน</h3>
         <div className="grid grid-cols-3 gap-3">
             <button 
-                onClick={() => handleQuickStatus('SAFE')}
-                className="bg-white border-2 border-green-100 hover:border-green-400 hover:bg-green-50 rounded-xl p-3 flex flex-col items-center gap-2 transition-all shadow-sm"
+                onClick={() => initiateQuickReport('SAFE')}
+                className="bg-white border-2 border-green-100 hover:border-green-400 hover:bg-green-50 rounded-xl p-3 flex flex-col items-center gap-2 transition-all shadow-sm active:scale-95"
             >
                 <div className="bg-green-100 p-2 rounded-full text-green-600">
                     <Smile size={24} />
@@ -243,8 +258,8 @@ const App: React.FC = () => {
             </button>
 
             <button 
-                onClick={() => handleQuickStatus('ANXIOUS')}
-                className="bg-white border-2 border-yellow-100 hover:border-yellow-400 hover:bg-yellow-50 rounded-xl p-3 flex flex-col items-center gap-2 transition-all shadow-sm"
+                onClick={() => initiateQuickReport('ANXIOUS')}
+                className="bg-white border-2 border-yellow-100 hover:border-yellow-400 hover:bg-yellow-50 rounded-xl p-3 flex flex-col items-center gap-2 transition-all shadow-sm active:scale-95"
             >
                 <div className="bg-yellow-100 p-2 rounded-full text-yellow-600">
                     <Frown size={24} />
@@ -253,8 +268,8 @@ const App: React.FC = () => {
             </button>
 
             <button 
-                onClick={() => handleQuickStatus('HUNGRY')}
-                className="bg-white border-2 border-orange-100 hover:border-orange-400 hover:bg-orange-50 rounded-xl p-3 flex flex-col items-center gap-2 transition-all shadow-sm"
+                onClick={() => initiateQuickReport('HUNGRY')}
+                className="bg-white border-2 border-orange-100 hover:border-orange-400 hover:bg-orange-50 rounded-xl p-3 flex flex-col items-center gap-2 transition-all shadow-sm active:scale-95"
             >
                 <div className="bg-orange-100 p-2 rounded-full text-orange-600">
                     <Utensils size={24} />
@@ -268,7 +283,7 @@ const App: React.FC = () => {
       <div className="grid grid-cols-2 gap-3">
          <button 
             onClick={() => setView('REPORT')}
-            className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3 hover:bg-blue-50 transition"
+            className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3 hover:bg-blue-50 transition active:scale-95"
          >
             <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                 <AlertCircle size={20} />
@@ -281,7 +296,7 @@ const App: React.FC = () => {
          
          <button 
             onClick={() => setView('CONTACTS')}
-            className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3 hover:bg-green-50 transition"
+            className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3 hover:bg-green-50 transition active:scale-95"
          >
             <div className="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center flex-shrink-0">
                 <PhoneCall size={20} />
@@ -384,7 +399,7 @@ const App: React.FC = () => {
                                 <CheckCircle2 size={16} /> ระบบแจ้งเตือนเรียบร้อย
                             </h3>
                             <ul className="text-xs text-gray-600 space-y-1 ml-6 list-disc">
-                                <li>อ.ที่ปรึกษา (061-914-9553)</li>
+                                <li>อ.ที่ปรึกษาชุมนุมฯ (061-914-9553)</li>
                                 <li>รองผู้อำนวยการ (089-655-5569)</li>
                                 <li>ผอ.โรงเรียน (087-397-3315)</li>
                             </ul>
@@ -412,6 +427,86 @@ const App: React.FC = () => {
                     </div>
                 </div>
             </div>
+        )}
+
+        {/* ✨ Quick Report Modern Modal (เพิ่ม Modal สวยๆ ตรงนี้) */}
+        {showQuickModal && (
+             <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200 backdrop-blur-sm">
+                <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+                    {/* Header สีตามสถานะ */}
+                    <div className={`p-5 text-white flex justify-between items-center ${
+                        quickStatus === 'SAFE' ? 'bg-green-500' :
+                        quickStatus === 'ANXIOUS' ? 'bg-yellow-500' : 'bg-orange-500'
+                    }`}>
+                        <div className="flex items-center gap-3">
+                             <div className="bg-white/20 p-2 rounded-full">
+                                {quickStatus === 'SAFE' ? <Smile size={24}/> :
+                                 quickStatus === 'ANXIOUS' ? <Frown size={24}/> : <Utensils size={24}/>}
+                             </div>
+                             <div>
+                                <div className="text-xs opacity-90">ยืนยันสถานะ</div>
+                                <div className="text-lg font-bold">
+                                    {quickStatus === 'SAFE' ? 'ปลอดภัยดี' :
+                                     quickStatus === 'ANXIOUS' ? 'รู้สึกกังวล' : 'ขาดอาหาร'}
+                                </div>
+                             </div>
+                        </div>
+                        <button onClick={() => setShowQuickModal(false)} className="bg-white/20 p-1 rounded-full hover:bg-white/40 transition">
+                            <X size={20} />
+                        </button>
+                    </div>
+
+                    {/* Content Form */}
+                    <div className="p-6 space-y-4">
+                         <div>
+                            <label className="text-sm font-bold text-gray-700 mb-1 block">ชื่อ-สกุล <span className="text-red-500">*</span></label>
+                            <div className="relative">
+                                <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <input 
+                                    type="text" 
+                                    value={quickName}
+                                    onChange={e => setQuickName(e.target.value)}
+                                    className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-800"
+                                    placeholder="เช่น สมชาย ใจดี"
+                                    autoFocus
+                                />
+                            </div>
+                         </div>
+
+                         <div>
+                            <label className="text-sm font-bold text-gray-700 mb-1 block">เบอร์โทรศัพท์ <span className="text-red-500">*</span></label>
+                            <div className="relative">
+                                <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <input 
+                                    type="tel" 
+                                    value={quickPhone}
+                                    onChange={e => setQuickPhone(e.target.value)}
+                                    className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-800"
+                                    placeholder="เช่น 081-234-5678"
+                                />
+                            </div>
+                         </div>
+
+                         <div className="pt-2 flex gap-3">
+                            <button 
+                                onClick={() => setShowQuickModal(false)}
+                                className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition"
+                            >
+                                ยกเลิก
+                            </button>
+                            <button 
+                                onClick={confirmQuickReport}
+                                className={`flex-1 py-3 text-white rounded-xl font-bold shadow-lg shadow-gray-200 active:scale-95 transition ${
+                                    quickStatus === 'SAFE' ? 'bg-green-500 hover:bg-green-600' :
+                                    quickStatus === 'ANXIOUS' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-orange-500 hover:bg-orange-600'
+                                }`}
+                            >
+                                ยืนยันข้อมูล
+                            </button>
+                         </div>
+                    </div>
+                </div>
+             </div>
         )}
       </div>
       <NavBar currentView={view} setView={setView} />
