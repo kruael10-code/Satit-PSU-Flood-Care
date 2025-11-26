@@ -3,7 +3,7 @@ import { ViewState, StudentReport, RiskLevel, Announcement } from './types';
 import NavBar from './components/NavBar';
 import ReportForm from './components/ReportForm';
 import AdminDashboard from './components/AdminDashboard';
-import ChatInterface from './components/ChatInterface';
+// ❌ เอา import ChatInterface ออกแล้ว
 import ContactList from './components/ContactList';
 import { Bell, PhoneCall, Droplets, CloudRain, Waves, Smile, Frown, Utensils, AlertCircle, ChevronRight, Siren, HeartPulse, Loader2, CheckCircle2 } from 'lucide-react';
 import { getStoredReports, saveReports, getStoredAnnouncements, saveAnnouncements } from './services/storageService';
@@ -344,12 +344,7 @@ const App: React.FC = () => {
                 <ReportForm onSubmit={handleReportSubmit} onCancel={() => setView('HOME')} />
             </div>
         )}
-        {view === 'CHAT' && (
-            <div className="px-4 pt-6 pb-20 h-full">
-                <h2 className="text-xl font-bold text-gray-800 mb-2">สอบถามข้อมูล (AI)</h2>
-                <ChatInterface />
-            </div>
-        )}
+        {/* ❌ เอาส่วนแสดงผล ChatInterface ออกแล้ว */}
         {view === 'ADMIN' && (
             <AdminDashboard 
                 reports={reports} 

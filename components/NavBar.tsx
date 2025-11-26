@@ -25,7 +25,6 @@ const NavBar: React.FC<NavBarProps> = ({ currentView, setView }) => {
       <div className="flex justify-around max-w-md mx-auto">
         {navItem('HOME', <Home size={24} />, 'หน้าหลัก')}
         {navItem('REPORT', <AlertTriangle size={24} />, 'แจ้งเหตุ')}
-        {navItem('CHAT', <MessageCircle size={24} />, 'ปรึกษา')}
         {navItem('ADMIN', <ShieldAlert size={24} />, 'จนท.')}
       </div>
     </div>
