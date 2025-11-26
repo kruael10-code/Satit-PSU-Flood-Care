@@ -1,13 +1,13 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
-import './index.css' // (ถ้ามี)
-// 1. นำเข้า HashRouter
+import './index.css'
+// เปลี่ยนจาก BrowserRouter เป็น HashRouter
 import { HashRouter } from 'react-router-dom'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    {/* 2. เอา HashRouter มาครอบ App ไว้แบบนี้ครับ */}
+    {/* ใช้ HashRouter ครอบ App ไว้ จะช่วยแก้ปัญหาหน้าขาวบน GitHub Pages ได้ 100% */}
     <HashRouter>
       <App />
     </HashRouter>
