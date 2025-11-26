@@ -40,7 +40,14 @@ const ReportForm: React.FC<ReportFormProps> = ({ onSubmit, onCancel }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message || !name) return;
+
+    // ✨ ส่วนที่ 1: เช็คชื่อก่อนส่ง (เพิ่มใหม่)
+    if (!name.trim()) {
+        alert('⚠️ กรุณากรอก "ชื่อ-สกุล" ให้เรียบร้อยก่อนส่งข้อมูลครับ!');
+        return;
+    }
+
+    if (!message) return;
 
     setLoading(true);
     
@@ -70,12 +77,15 @@ const ReportForm: React.FC<ReportFormProps> = ({ onSubmit, onCancel }) => {
         
         <div className="grid grid-cols-2 gap-2">
            <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อ-สกุล</label>
+            {/* ✨ ส่วนที่ 2: เพิ่มดาวสีแดง (*) บอกความสำคัญ */}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+                ชื่อ-สกุล <span className="text-red-500">*</span>
+            </label>
             <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="ชื่อเล่น หรือ ชื่อจริง"
+                placeholder="ระบุชื่อ-สกุล (จำเป็น)"
                 className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 required
             />
