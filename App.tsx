@@ -197,11 +197,11 @@ const NavBar: React.FC<{ currentView: ViewState; setView: (view: ViewState) => v
 // ContactList
 const ContactList: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const contacts = [
-    { name: 'อ.ที่ปรึกษา', phone: '061-914-9553', desc: 'อาจารย์ประจำหอพัก' },
-    { name: 'รองผู้อำนวยการ', phone: '089-655-5569', desc: 'ฝ่ายบริหารทั่วไป' },
-    { name: 'ผอ.โรงเรียน', phone: '087-397-3315', desc: 'ผู้อำนวยการ' },
-    { name: 'ตำรวจ (สภ.เมือง)', phone: '191', desc: 'เหตุด่วนเหตุร้าย' },
-    { name: 'กู้ภัยปัตตานี', phone: '1669', desc: 'เจ็บป่วยฉุกเฉิน' },
+    { name: 'อ.ที่ปรึกษาฯ', phone: '061-914-9553', desc: 'อาจารย์ที่ปรึกษาชุมนุมหอพัก' },
+    { name: 'รองผู้อำนวยการ', phone: '089-655-5569', desc: 'รองผู้อำนวยการฝ่ายกิจการนักเรียน' },
+    { name: 'สายตรง ผอ.', phone: '087-397-3315', desc: 'ผู้อำนวยการโรงเรียน' },
+    { name: 'รปภ.ม.อ.', phone: '073313345', desc: 'รปภ.มหาวิทยาลัยสงขลานครินทร์ วิทยาเขตปัตตานี' },
+    { name: 'แพทย์ฉุกเฉิน', phone: '1669', desc: 'เจ็บป่วยฉุกเฉิน' },
   ];
 
   return (
@@ -592,7 +592,7 @@ const App: React.FC = () => {
       <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
         <div className="absolute -right-4 -top-4 opacity-20"><Waves size={100} /></div>
         <div className="flex justify-between items-end mb-4 relative z-10">
-            <div><h2 className="text-sm font-medium text-blue-100 flex items-center gap-1"><Droplets size={14}/> ปริมาณฝนสะสม</h2><div className="text-3xl font-bold">{WEATHER_DATA.rainToday}</div><span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">{WEATHER_DATA.rainStatus}</span></div>
+            <div><h2 className="text-sm font-medium text-blue-100 flex items-center gap-1"><Droplets size={14}/> ปริมาณฝนสะสม (วันนี้)</h2><div className="text-3xl font-bold">{WEATHER_DATA.rainToday}</div><span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">{WEATHER_DATA.rainStatus}</span></div>
             <div className="text-right"><h2 className="text-sm font-medium text-blue-100 flex items-center justify-end gap-1"><Waves size={14}/> ระดับน้ำทะเล</h2><div className="text-2xl font-bold">{WEATHER_DATA.seaLevel}</div><div className="text-xs text-blue-200">หนุนสูงกว่าปกติ</div></div>
         </div>
         <div className="bg-white/10 backdrop-blur-md rounded-xl p-3">
