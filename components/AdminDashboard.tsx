@@ -1,4 +1,32 @@
-// AdminDashboard (แก้ไขแล้ว)
+import React, { useState, useEffect } from 'react';
+import { 
+  Lock, 
+  LogOut, 
+  Phone, 
+  Clock, 
+  MapPin, 
+  MessageSquare, 
+  CheckCircle2, 
+  Trash2 
+} from 'lucide-react';
+import { StudentReport, Announcement, RiskLevel } from '../types'; 
+
+// --- Helper Functions (ใส่ไว้ตรงนี้เพื่อให้ทำงานได้ทันที) ---
+const safeDate = (date: any) => {
+  if (!date) return new Date();
+  return date instanceof Date ? date : new Date(date);
+};
+
+const formatTimeSafe = (date: any) => {
+  try {
+    const d = safeDate(date);
+    return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  } catch (e) {
+    return '--:--';
+  }
+};
+// -------------------------------------------------------
+
 const AdminDashboard: React.FC<{ 
   reports: StudentReport[]; 
   announcements: Announcement[];
@@ -89,7 +117,6 @@ const AdminDashboard: React.FC<{
                  <div className="text-xs text-gray-500 mb-2 flex items-center gap-1"><MapPin size={12} /> {report.dormitory || 'ไม่ระบุพิกัด'}</div>
                  <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 border border-gray-100"><MessageSquare size={14} className="inline mr-1 text-gray-400"/>{report.message}</div>
                  
-                 {/* แก้ไข Link ให้ถูกต้อง */}
                  {report.location && (
                     <a href={`https://www.google.com/maps?q=${report.location.latitude},${report.location.longitude}`} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs text-blue-600 hover:underline bg-blue-50 px-2 py-1 rounded">
                         <MapPin size={12} /> ดูพิกัด GPS
@@ -101,7 +128,6 @@ const AdminDashboard: React.FC<{
                      <a href={`tel:${report.phoneNumber}`} className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition shadow-sm active:scale-95"><Phone size={16} /> โทรกลับ</a>
                 ) : (<button disabled className="flex-1 bg-gray-100 text-gray-400 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 cursor-not-allowed"><Phone size={16} /> ไม่มีเบอร์</button>)}
                 
-                {/* แก้ไข CheckCircle เป็น CheckCircle2 */}
                 <button onClick={() => resolveReport(report.id)} className={`p-2 rounded-lg border transition ${report.isResolved ? 'bg-green-100 text-green-600' : 'bg-white text-gray-400'}`}><CheckCircle2 size={20} /></button>
                 
                 <button onClick={() => deleteReport(report.id)} className="p-2 rounded-lg border border-gray-200 text-gray-400 hover:text-red-500"><Trash2 size={20} /></button>
@@ -130,3 +156,5 @@ const AdminDashboard: React.FC<{
     </div>
   );
 };
+
+export default AdminDashboard;

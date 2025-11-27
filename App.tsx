@@ -28,7 +28,7 @@ import {
   Home,
   ShieldAlert,
   Shield,
-  GraduationCap // เพิ่มไอคอนหมวกการศึกษา
+  GraduationCap
 } from 'lucide-react';
 
 // --- 1. TYPES (ส่วนกำหนดประเภทข้อมูล) ---
@@ -469,34 +469,64 @@ const AdminDashboard: React.FC<{
 
 // --- 4. MAIN APP COMPONENT ---
 
-const WEATHER_DATA = {
-  seaLevel: "2.8 ม.",
-  rainToday: "120 มม.",
-  rainStatus: "ตกหนักมาก",
-  forecast: [
-    { day: 'วันนี้', icon: <CloudRain size={16} className="text-blue-500" />, temp: '28°', rain: '90%' },
-    { day: 'พรุ่งนี้', icon: <CloudRain size={16} className="text-blue-500" />, temp: '27°', rain: '80%' },
-    { day: 'พุธ', icon: <CloudRain size={16} className="text-blue-400" />, temp: '29°', rain: '60%' },
-    { day: 'พฤหัส', icon: <Droplets size={16} className="text-blue-300" />, temp: '30°', rain: '40%' },
-    { day: 'ศุกร์', icon: <CloudRain size={16} className="text-gray-400" />, temp: '31°', rain: '30%' },
-    { day: 'เสาร์', icon: <Smile size={16} className="text-yellow-500" />, temp: '32°', rain: '10%' },
-    { day: 'อาทิตย์', icon: <Smile size={16} className="text-yellow-500" />, temp: '33°', rain: '0%' },
-  ]
-};
-
 const App: React.FC = () => {
   const [view, setView] = useState<ViewState>('HOME');
   const [reports, setReports] = useState<StudentReport[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // --- ส่วนที่เพิ่ม: State สำหรับข้อมูลสภาพอากาศ ---
+  const [weather, setWeather] = useState({
+    seaLevel: 2.85, // เก็บเป็นตัวเลขเพื่อให้คำนวณได้
+    rainToday: 120, // เก็บเป็นตัวเลข
+    rainStatus: "ตกหนักมาก",
+    forecast: [
+        { day: 'วันนี้', icon: <CloudRain size={16} className="text-blue-500" />, temp: '28°', rain: '90%' },
+        { day: 'พรุ่งนี้', icon: <CloudRain size={16} className="text-blue-500" />, temp: '27°', rain: '80%' },
+        { day: 'พุธ', icon: <CloudRain size={16} className="text-blue-400" />, temp: '29°', rain: '60%' },
+        { day: 'พฤหัส', icon: <Droplets size={16} className="text-blue-300" />, temp: '30°', rain: '40%' },
+        { day: 'ศุกร์', icon: <CloudRain size={16} className="text-gray-400" />, temp: '31°', rain: '30%' },
+        { day: 'เสาร์', icon: <Smile size={16} className="text-yellow-500" />, temp: '32°', rain: '10%' },
+        { day: 'อาทิตย์', icon: <Smile size={16} className="text-yellow-500" />, temp: '33°', rain: '0%' },
+    ]
+  });
+
+  // ... (State อื่นๆ คงเดิม: showSOSDialog, showQuickModal ฯลฯ) ...
   const [showSOSDialog, setShowSOSDialog] = useState(false);
   const [sosLoading, setSosLoading] = useState(false);
   const [showQuickModal, setShowQuickModal] = useState(false);
   const [quickStatus, setQuickStatus] = useState<'SAFE' | 'ANXIOUS' | 'HUNGRY' | null>(null);
   const [quickName, setQuickName] = useState('');
-  const [quickClass, setQuickClass] = useState(''); // เพิ่ม state ชั้นเรียน
+  const [quickClass, setQuickClass] = useState('');
   const [quickPhone, setQuickPhone] = useState('');
 
+  // --- ส่วนที่เพิ่ม: จำลองข้อมูล Real-time (Simulate Sensor Data) ---
+  useEffect(() => {
+    const weatherInterval = setInterval(() => {
+      setWeather(prev => {
+        // 1. จำลองระดับน้ำทะเลขึ้นลงเล็กน้อย (คลื่น)
+        const fluctuation = (Math.random() * 0.04) - 0.02; // +/- 0.02 เมตร
+        let newSeaLevel = prev.seaLevel + fluctuation;
+        // จำกัดขอบเขตไม่ให้ต่ำหรือสูงเกินไป
+        if (newSeaLevel < 2.5) newSeaLevel = 2.5;
+        if (newSeaLevel > 3.2) newSeaLevel = 3.2;
+
+        // 2. จำลองฝนตกสะสมเพิ่มขึ้นทีละนิด
+        const rainIncrease = Math.random() > 0.7 ? 0.5 : 0; // เพิ่ม 0.5 มม. บางครั้ง
+
+        return {
+          ...prev,
+          seaLevel: parseFloat(newSeaLevel.toFixed(3)),
+          rainToday: parseFloat((prev.rainToday + rainIncrease).toFixed(1))
+        };
+      });
+    }, 3000); // อัพเดททุก 3 วินาที
+
+    return () => clearInterval(weatherInterval);
+  }, []);
+  // -----------------------------------------------------------
+
+  // ... (ฟังก์ชัน handleReportSubmit, resolveReport และอื่นๆ คงเดิม) ...
   useEffect(() => {
     setReports(getStoredReports());
     setAnnouncements(getStoredAnnouncements());
@@ -591,26 +621,40 @@ const App: React.FC = () => {
     setShowSOSDialog(true);
   };
 
+  // --- แก้ไขการแสดงผล (Render) ---
   const renderHome = () => (
     <div className="px-4 pt-4 pb-24 max-w-md mx-auto space-y-5 animate-fade-in">
+      {/* ... Header คงเดิม ... */}
       <div className="flex justify-between items-start">
         <div><h1 className="text-xl font-bold text-blue-900 leading-tight font-prompt">Satit PSU <br/>Flood Care</h1><p className="text-xs text-gray-500">รูสะมิแล, ปัตตานี</p></div>
         <div className="text-right"><div className="text-2xl font-mono font-bold text-gray-800 leading-none">{currentTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</div><div className="text-xs text-gray-500">{currentTime.toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'short' })}</div></div>
       </div>
       
-      <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
+      {/* --- ส่วนแสดงผล Weather ที่แก้ไข --- */}
+      <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden transition-all duration-1000">
         <div className="absolute -right-4 -top-4 opacity-20"><Waves size={100} /></div>
         <div className="flex justify-between items-end mb-4 relative z-10">
-            <div><h2 className="text-sm font-medium text-blue-100 flex items-center gap-1"><Droplets size={14}/> ปริมาณฝนสะสม</h2><div className="text-3xl font-bold">{WEATHER_DATA.rainToday}</div><span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">{WEATHER_DATA.rainStatus}</span></div>
-            <div className="text-right"><h2 className="text-sm font-medium text-blue-100 flex items-center justify-end gap-1"><Waves size={14}/> ระดับน้ำทะเล</h2><div className="text-2xl font-bold">{WEATHER_DATA.seaLevel}</div><div className="text-xs text-blue-200">หนุนสูงกว่าปกติ</div></div>
+            <div>
+                <h2 className="text-sm font-medium text-blue-100 flex items-center gap-1"><Droplets size={14}/> ปริมาณฝนสะสม</h2>
+                {/* ดึงค่าจาก State */}
+                <div className="text-3xl font-bold animate-pulse">{weather.rainToday.toFixed(1)} มม.</div>
+                <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">{weather.rainStatus}</span>
+            </div>
+            <div className="text-right">
+                <h2 className="text-sm font-medium text-blue-100 flex items-center justify-end gap-1"><Waves size={14}/> ระดับน้ำทะเล</h2>
+                {/* ดึงค่าจาก State และแสดงทศนิยม 2 ตำแหน่ง */}
+                <div className="text-2xl font-bold transition-all duration-500">{weather.seaLevel.toFixed(2)} ม.</div>
+                <div className="text-xs text-blue-200">หนุนสูงกว่าปกติ</div>
+            </div>
         </div>
         <div className="bg-white/10 backdrop-blur-md rounded-xl p-3">
              <div className="flex justify-between items-center text-xs text-blue-100 mb-2"><span>พยากรณ์ 7 วันข้างหน้า</span><ChevronRight size={14} /></div>
              <div className="flex justify-between gap-2 overflow-x-auto pb-1 hide-scrollbar">
-                {WEATHER_DATA.forecast.map((day, idx) => (<div key={idx} className="flex flex-col items-center min-w-[36px]"><span className="text-[10px] mb-1">{day.day}</span><div className="mb-1">{day.icon}</div><span className="text-[10px] font-bold">{day.temp}</span></div>))}
+                {weather.forecast.map((day, idx) => (<div key={idx} className="flex flex-col items-center min-w-[36px]"><span className="text-[10px] mb-1">{day.day}</span><div className="mb-1">{day.icon}</div><span className="text-[10px] font-bold">{day.temp}</span></div>))}
              </div>
         </div>
       </div>
+      {/* ---------------------------------- */}
 
       <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-4 border border-blue-50 shadow-sm">
         <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -659,9 +703,9 @@ const App: React.FC = () => {
         {view === 'ADMIN' && (<AdminDashboard reports={reports} announcements={announcements} resolveReport={resolveReport} deleteReport={deleteReport} postAnnouncement={postAnnouncement} deleteAnnouncement={deleteAnnouncement}/>)}
         {view === 'CONTACTS' && (<ContactList onBack={() => setView('HOME')} />)}
         
+        {/* ... (Modal ส่วน SOS และ Quick Report คงเดิม) ... */}
         {showSOSDialog && (<div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 animate-in fade-in zoom-in duration-300"><div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl"><div className="bg-red-600 p-5 text-white text-center relative overflow-hidden"><div className="animate-ping w-24 h-24 bg-red-400 rounded-full absolute top-[-20px] left-1/2 -translate-x-1/2 opacity-30"></div><Siren size={48} className="mx-auto mb-2 relative z-10" /><h2 className="text-2xl font-bold relative z-10">ส่งสัญญาณแล้ว!</h2></div><div className="p-5"><div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-5"><h3 className="text-green-800 font-bold text-sm mb-2 flex items-center gap-2"><CheckCircle2 size={16} /> ระบบแจ้งเตือนเรียบร้อย</h3><ul className="text-xs text-gray-600 space-y-1 ml-6 list-disc"><li>อ.ที่ปรึกษา (061-914-9553)</li><li>รองผู้อำนวยการ (089-655-5569)</li><li>ผอ.โรงเรียน (087-397-3315)</li></ul></div><p className="text-center text-gray-800 font-bold mb-3">ต้องการความช่วยเหลือทางใด?</p><div className="space-y-3"><a href="tel:191" className="block w-full bg-red-600 text-white py-4 rounded-xl text-xl font-bold text-center shadow-lg hover:bg-red-700 hover:shadow-red-200 transition-all flex items-center justify-center gap-3 active:scale-95"><Siren size={24} /> โทร 191</a><a href="tel:1669" className="block w-full bg-green-600 text-white py-4 rounded-xl text-xl font-bold text-center shadow-lg hover:bg-green-700 hover:shadow-green-200 transition-all flex items-center justify-center gap-3 active:scale-95"><HeartPulse size={24} /> โทร 1669</a></div><div className="text-center pt-4"><button onClick={() => setShowSOSDialog(false)} className="text-gray-400 underline text-sm hover:text-gray-600">ปิดหน้าต่างนี้</button></div></div></div></div>)}
         
-        {/* Quick Report Modal with Class Input */}
         {showQuickModal && (
             <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200 backdrop-blur-sm">
                 <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
